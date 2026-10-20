@@ -1,0 +1,6 @@
+{
+  "name": "Session Zero Solutions - The Session Zero Sourcebook",
+  "description": "Executive competitive intelligence audit engine, 12-month strategic visibility roadmap generator, and CRM milestone tracker for Trade Contractors and TTRPG / Indie Game Studios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

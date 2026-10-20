@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session Zero Solutions — The Session Zero Sourcebook</title>
+  <!-- Tailwind CSS via CDN for Google Apps Script HTMLService -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              slate: '#0F172A',
+              panel: '#1E293B',
+              border: '#334155',
+              cyan: '#38BDF8',
+              emerald: '#34D399',
+              amber: '#FBBF24',
+              red: '#F87171'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* 16:9 Aspect Ratio Canvas */
+    .slide-canvas {
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      max-width: 1024px;
+      margin: 0 auto;
+    }
+
+    /* Editable Text Highlight */
+    [contenteditable="true"]:hover {
+      outline: 1px dashed #38BDF8;
+      cursor: text;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #38BDF8;
+      background: rgba(56, 189, 248, 0.05);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white pb-20">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <!-- Hamburger Button -->
+      <button id="btnHamburger" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+
+      <!-- Brand -->
+      <div class="flex items-center space-x-2">
+        <span class="text-sm font-black tracking-wider text-white">SESSION ZERO</span>
+        <span class="px-2 py-0.5 text-xs font-semibold bg-sky-500/10 border border-sky-500/30 text-sky-400 rounded-full">Sourcebook Engine</span>
+      </div>
+    </div>
+
+    <!-- Active Client & Actions -->
+    <div class="flex items-center space-x-2">
+      <!-- Active Client Selector -->
+      <select id="clientSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-sky-400">
+        <option value="">Select Client...</option>
+      </select>
+
+      <!-- Demo Loader Toggle -->
+      <div class="relative inline-block text-left">
+        <button id="btnLoadDemo" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 rounded-lg transition flex items-center space-x-1">
+          <span>⚡ Demo</span>
+        </button>
+      </div>
+
+      <!-- Quick New Audit -->
+      <button id="btnNewClient" class="px-3 py-1.5 text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-lg transition shadow-sm">
+        + New Audit
+      </button>
+
+      <!-- Settings Button -->
+      <button id="btnSettings" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Settings & API Key">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= HAMBURGER FLYOUT DRAWER (AGENCY CRM & PIPELINE) ================= -->
+  <div id="drawerOverlay" class="fixed inset-0 bg-black/60 z-50 backdrop-blur-xs hidden transition-opacity"></div>
+  <aside id="crmDrawer" class="fixed top-0 left-0 bottom-0 w-80 sm:w-96 bg-slate-900 border-r border-slate-800 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col">
+    <!-- Drawer Header -->
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-bold text-white tracking-wide">AGENCY PIPELINE & CRM</h2>
+        <p class="text-xs text-slate-400">Session Zero Executive Operations</p>
+      </div>
+      <button id="btnCloseDrawer" class="text-slate-400 hover:text-white p-1">✕</button>
+    </div>
+
+    <!-- Drawer Content -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-5">
+      <!-- High-Level Counters -->
+      <div class="grid grid-cols-2 gap-2 text-center">
+        <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700">
+          <div class="text-xs text-slate-400 font-medium">Total Clients</div>
+          <div id="counterTotalClients" class="text-lg font-bold text-sky-400">0</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700">
+          <div class="text-xs text-slate-400 font-medium">Active Audits</div>
+          <div id="counterActiveAudits" class="text-lg font-bold text-emerald-400">0</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700">
+          <div class="text-xs text-slate-400 font-medium">Trade Contractors</div>
+          <div id="counterTrade" class="text-lg font-bold text-amber-400">0</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700">
+          <div class="text-xs text-slate-400 font-medium">TTRPG / Indie</div>
+          <div id="counterTtrpg" class="text-lg font-bold text-purple-400">0</div>
+        </div>
+      </div>
+
+      <!-- Agency Pipeline by Stage -->
+      <div>
+        <h3 class="text-xs font-semibold uppercase text-slate-400 tracking-wider mb-2">Client Pipeline Stages</h3>
+        <div id="pipelineList" class="space-y-2">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Global Milestone Tracker -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Current Month Deliverables</h3>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-sky-400 rounded">Cross-Client</span>
+        </div>
+        <div id="globalMilestonesList" class="space-y-2 text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Google Workspace Info -->
+      <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+        <div class="font-semibold text-slate-300">Google Workspace Sync</div>
+        <div>Spreadsheet: <span id="syncSheetStatus" class="text-emerald-400">Session Zero Operations</span></div>
+        <div>Model Engine: <span id="syncModelStatus" class="text-sky-400 font-mono">gemini-3.5-flash</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= SETTINGS MODAL ================= -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white">System Settings & Engine Config</h3>
+        <button id="btnCloseSettings" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">Gemini API Key</label>
+          <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs" />
+          <p class="text-[10px] text-slate-500 mt-1">If blank, defaults to Script Properties or server injected secret.</p>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">Gemini Model Identifier</label>
+          <input type="text" id="inputModel" value="gemini-3.5-flash" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs" />
+          <p class="text-[10px] text-slate-500 mt-1">Default: <code class="text-sky-400">gemini-3.5-flash</code> (with Google Search Grounding enabled).</p>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">Target Google Sheet ID</label>
+          <input type="text" id="inputSheetId" placeholder="Auto-managed or custom ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button id="btnInitDb" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition">Init Sheet DB</button>
+        <button id="btnSaveSettings" class="px-4 py-1.5 text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-lg transition">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- TAB 1: DOSSIER (CLIENT INTAKE & SCOPE) -->
+    <section id="tabDossier" class="tab-content space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div>
+          <h1 class="text-xl font-black tracking-tight text-white">CLIENT DOSSIER & INTAKE SCOPE</h1>
+          <p class="text-xs text-slate-400">Calibrate client baseline, capacity reality check, and strategic 12-month horizon.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="btnLoadTtrpgDemo" class="px-3 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 rounded-lg transition">
+            Load TTRPG Demo
+          </button>
+          <button id="btnLoadTradeDemo" class="px-3 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg transition">
+            Load Contractor Demo
+          </button>
+        </div>
+      </div>
+
+      <form id="formDossier" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
+        <!-- Left Column: Business Profile -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Client / Company Name *</label>
+            <input type="text" id="clientName" required placeholder="e.g. Mythic Forge Games or Apex Mechanical" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-400" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Primary Domain / Storefront URL</label>
+            <input type="url" id="clientUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-400" />
+          </div>
+
+          <!-- Operational Track Toggle -->
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Operational Track *</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="cursor-pointer">
+                <input type="radio" name="operationalTrack" value="trade_contractor" class="peer sr-only" />
+                <div class="p-3 rounded-lg border border-slate-700 peer-checked:border-amber-400 peer-checked:bg-amber-500/10 transition">
+                  <div class="text-xs font-bold text-amber-300">Trade Contractor / SBO</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">Google Business Profile, local 3-pack, review velocity, seasonal shifts.</div>
+                </div>
+              </label>
+
+              <label class="cursor-pointer">
+                <input type="radio" name="operationalTrack" value="ttrpg_indie" checked class="peer sr-only" />
+                <div class="p-3 rounded-lg border border-slate-700 peer-checked:border-purple-400 peer-checked:bg-purple-500/10 transition">
+                  <div class="text-xs font-bold text-purple-300">TTRPG / Indie Studio</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">Discord, itch.io, BackerKit followers, Actual Play coverage, 4-phase launch run-up.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Maturity Baseline -->
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Maturity Baseline Tier *</label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="maturityTier" value="0" class="peer sr-only" />
+                <div class="p-2.5 rounded-lg border border-slate-700 peer-checked:border-sky-400 peer-checked:bg-sky-500/10 text-center transition">
+                  <div class="text-xs font-bold text-sky-400">Tier 0</div>
+                  <div class="text-[10px] text-slate-400">Ground Zero (&lt;100 subs)</div>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="maturityTier" value="1" checked class="peer sr-only" />
+                <div class="p-2.5 rounded-lg border border-slate-700 peer-checked:border-sky-400 peer-checked:bg-sky-500/10 text-center transition">
+                  <div class="text-xs font-bold text-sky-400">Tier 1</div>
+                  <div class="text-[10px] text-slate-400">Emerging Traction</div>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="maturityTier" value="2" class="peer sr-only" />
+                <div class="p-2.5 rounded-lg border border-slate-700 peer-checked:border-sky-400 peer-checked:bg-sky-500/10 text-center transition">
+                  <div class="text-xs font-bold text-sky-400">Tier 2</div>
+                  <div class="text-[10px] text-slate-400">Established Contender</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Capacity & Strategy -->
+        <div class="space-y-4">
+          <!-- Capacity Reality Check -->
+          <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase text-slate-300">Capacity Reality Check</span>
+              <span class="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-300 rounded border border-red-500/30">Strict Ceiling</span>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span>Dedicated Weekly Bandwidth:</span>
+                <span id="weeklyHoursLabel" class="font-bold text-sky-400">6 Hours / Week</span>
+              </div>
+              <input type="range" id="weeklyHours" min="2" max="25" step="1" value="6" class="w-full accent-sky-400 cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span>Monthly Growth Budget:</span>
+                <span id="monthlyBudgetLabel" class="font-bold text-emerald-400">$500 / Month</span>
+              </div>
+              <input type="range" id="monthlyBudget" min="100" max="5000" step="100" value="500" class="w-full accent-emerald-400 cursor-pointer" />
+            </div>
+          </div>
+
+          <!-- Seed Competitors -->
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Known Competitor Rivals (Optional)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="seed1" placeholder="Seed Rival 1" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400" />
+              <input type="text" id="seed2" placeholder="Seed Rival 2" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400" />
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">AI locks seed rivals into their proper tier and discovers remaining bracket peers via live search.</p>
+          </div>
+
+          <!-- Primary Horizon -->
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Primary 12-Month Horizon Target *</label>
+            <textarea id="primaryHorizon" rows="3" required placeholder="e.g. Fund $45k sci-fi horror TTRPG on BackerKit or Secure 120 recurring HVAC maintenance agreements..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400"></textarea>
+          </div>
+
+          <!-- Form Buttons -->
+          <div class="flex items-center space-x-3 pt-2">
+            <button type="button" id="btnSaveProfile" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition">
+              💾 Save Profile to Sheet
+            </button>
+            <button type="submit" id="btnRunAudit" class="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold rounded-lg transition shadow-md shadow-sky-500/20 flex items-center justify-center space-x-1.5">
+              <span>🚀 Run Strategic Audit</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Loading / Progress State -->
+      <div id="auditProgress" class="hidden bg-slate-900 border border-sky-500/30 rounded-xl p-6 text-center space-y-4">
+        <div class="inline-block animate-spin w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full"></div>
+        <div class="space-y-1">
+          <h3 id="progressStageTitle" class="text-sm font-bold text-white">STAGE 1: GROUNDED COMPETITOR RECON</h3>
+          <p id="progressStageDesc" class="text-xs text-slate-400">Synthesizing live web intelligence, local signals, and building 5-Player Bracket...</p>
+        </div>
+        <div class="w-full max-w-md mx-auto bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="progressBar" class="bg-sky-400 h-full w-1/4 transition-all duration-500"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: THE BRACKET (3-TIER COMMAND LAYOUT) -->
+    <section id="tabBracket" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h1 class="text-xl font-black tracking-tight text-white">THE 6-COMPETITOR STRATEGIC SPREAD</h1>
+          <p class="text-xs text-slate-400">
+            3-Tier Command Layout: 2 Aspirational Targets, Center Immediate Battleground (Seed Anchors + Client), 2 Lateral Peers.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-slate-400">Thought Leadership Score:</span>
+          <span id="scoreBadge" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+            5.4 / 10
+          </span>
+        </div>
+      </div>
+
+      <!-- 3-TIER CONTAINER -->
+      <div class="space-y-6">
+        <!-- TIER 1: ASPIRATIONAL LEADERS -->
+        <div class="space-y-2">
+          <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-sky-400">
+            <span>▲ TIER 1: ASPIRATIONAL LEADERS (2x–3x SCALE TARGETS)</span>
+          </div>
+          <div id="bracketTier1" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- TIER 2: IMMEDIATE BATTLEGROUND -->
+        <div class="space-y-2">
+          <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-amber-400">
+            <span>● TIER 2: IMMEDIATE BATTLEGROUND (SEED ANCHORS & CLIENT)</span>
+          </div>
+          <div id="bracketTier2" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- TIER 3: LATERAL & EMERGING CONTENDERS -->
+        <div class="space-y-2">
+          <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-purple-400">
+            <span>▼ TIER 3: LATERAL & EMERGING PEERS (NICHE CONTENDERS)</span>
+          </div>
+          <div id="bracketTier3" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- Strategic Takeaway Box -->
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
+        <div class="text-xs font-bold uppercase text-sky-400">Bracket Strategic Takeaway & Outflanking Angle</div>
+        <p id="bracketTakeaway" class="text-xs text-slate-300 leading-relaxed">
+          Select a client or run an audit to inspect competitive positioning dynamics.
+        </p>
+      </div>
+    </section>
+
+    <!-- TAB 3: GAP MATRIX (MARKET WHITESPACE) -->
+    <section id="tabGap" class="tab-content hidden space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <h1 class="text-xl font-black tracking-tight text-white">GAP & WHITESPACE MATRIX</h1>
+        <p class="text-xs text-slate-400">Owned & earned digital recon across 4 key channels plus 3-column diagnostic.</p>
+      </div>
+
+      <!-- High-Density Media Channels Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div class="p-3 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Owned & Earned Media Reconnaissance</span>
+          <span class="text-[10px] text-slate-500">Live Grounded Benchmarks</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-800/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3">Channel / Asset</th>
+                <th class="p-3">Client Status</th>
+                <th class="p-3">Aspirational Leader</th>
+                <th class="p-3 text-sky-400">Strategic Assessment</th>
+              </tr>
+            </thead>
+            <tbody id="channelsTableBody" class="divide-y divide-slate-800">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- The 3-Column Diagnostic -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Doing Well (Defend) -->
+        <div class="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold uppercase text-emerald-400">Doing Well (Defend)</span>
+            <span class="text-[10px] bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded">Core Strengths</span>
+          </div>
+          <div id="doingWellList" class="space-y-2 text-xs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Doing Better (Counter) -->
+        <div class="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold uppercase text-amber-400">Doing Better (Counter)</span>
+            <span class="text-[10px] bg-amber-500/10 text-amber-300 px-1.5 py-0.5 rounded">Rival Tactics</span>
+          </div>
+          <div id="doingBetterList" class="space-y-2 text-xs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Need to Add / Whitespace -->
+        <div class="bg-slate-900 border border-sky-500/30 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold uppercase text-sky-400">Whitespace (Seize)</span>
+            <span class="text-[10px] bg-sky-500/10 text-sky-300 px-1.5 py-0.5 rounded">Unclaimed Ground</span>
+          </div>
+          <div id="whitespaceList" class="space-y-2 text-xs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SOURCEBOOK DECK (INTERACTIVE PRESENTATION & EXPORT) -->
+    <section id="tabDeck" class="tab-content hidden space-y-6">
+      <!-- Deck Sub-Header & Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-black tracking-tight text-white">THE SOURCEBOOK DECK</h1>
+            <span class="text-[10px] px-2 py-0.5 bg-slate-800 text-sky-400 border border-slate-700 rounded">10 Slides • 16:9</span>
+          </div>
+          <p class="text-xs text-slate-400">In-place editable slide canvas with native Google Slides export and CRM journey tracker.</p>
+        </div>
+
+        <!-- View Mode Switch: Slides vs Journey Checklist -->
+        <div class="flex items-center space-x-2 bg-slate-900 p-1 rounded-lg border border-slate-800">
+          <button id="btnViewSlides" class="px-3 py-1 text-xs font-semibold bg-sky-500 text-slate-950 rounded transition">
+            Slides View
+          </button>
+          <button id="btnViewJourney" class="px-3 py-1 text-xs font-medium text-slate-300 hover:text-white rounded transition">
+            Journey Checklist
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= SLIDES VIEW CONTAINER ================= -->
+      <div id="slidesViewContainer" class="space-y-4">
+        <!-- Presentation Navigation Bar -->
+        <div class="flex items-center justify-between bg-slate-900 px-4 py-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center space-x-2">
+            <button id="btnPrevSlide" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition">◀ Prev</button>
+            <span id="slideIndicator" class="text-xs font-bold text-sky-400">Slide 1 / 10</span>
+            <button id="btnNextSlide" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition">Next ▶</button>
+          </div>
+
+          <!-- Slide Jump Indicators (1 to 10) -->
+          <div class="hidden sm:flex items-center space-x-1" id="slideJumpDots">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Editable Tip -->
+          <div class="text-[11px] text-slate-400 flex items-center space-x-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Click any text on slide to edit</span>
+          </div>
+        </div>
+
+        <!-- 16:9 SLIDE CANVAS -->
+        <div class="slide-canvas bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between p-6 sm:p-8 relative">
+          <!-- Slide Inner Content Area -->
+          <div id="slideCanvasContent" class="flex-1 flex flex-col justify-between overflow-y-auto">
+            <!-- Rendered dynamically by current slide number -->
+          </div>
+
+          <!-- Slide Footer -->
+          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+            <div>SESSION ZERO SOLUTIONS // CONFIDENTIAL EXECUTIVE BRIEFING</div>
+            <div id="slideFooterPage">Slide 1 of 10</div>
+          </div>
+        </div>
+
+        <!-- Speaker Notes Collapsible Drawer -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden">
+          <button id="btnToggleNotes" class="w-full px-4 py-2 text-left text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center justify-between bg-slate-950">
+            <span>🎙️ Strategic Advisor Speaker Notes</span>
+            <span id="notesChevron">▼</span>
+          </button>
+          <div id="notesBody" class="p-4 text-xs text-slate-300 leading-relaxed border-t border-slate-800">
+            Select a slide to inspect advisor commentary and execution nuances.
+          </div>
+        </div>
+
+        <!-- Action Dock -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <div class="flex items-center space-x-2">
+            <button id="btnExportSlides" class="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-lg transition flex items-center space-x-1.5 shadow-sm">
+              <span>📊 Export to Google Slides</span>
+            </button>
+            <button id="btnDownloadPdf" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition">
+              🖨️ Print / PDF
+            </button>
+            <button id="btnSaveToCrm" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition">
+              📁 Save Milestones to CRM
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button id="btnCopyJson" class="text-xs text-slate-400 hover:text-sky-300 transition">
+              Copy JSON Code Block
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= CLIENT JOURNEY & CRM TRACKER SUB-VIEW ================= -->
+      <div id="journeyViewContainer" class="hidden space-y-4">
+        <!-- Capacity Warning Alert -->
+        <div id="capacityWarningBox" class="p-4 rounded-xl bg-slate-900 border border-sky-500/30 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-white">Execution Capacity Reality Check:</span>
+            <span id="capacityStatusText" class="text-emerald-400 ml-1">Allocated 6.0 hrs / Weekly Capacity 6.0 hrs (Sustainable)</span>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 bg-emerald-500/10 text-emerald-300 rounded border border-emerald-500/30">Within Limits</span>
+        </div>
+
+        <!-- 4-Phase Checklist -->
+        <div id="journeyPhasesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= PERSISTENT BOTTOM NAVIGATION DOCK ================= -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-2 text-center text-xs">
+      <button data-tab="tabDossier" class="nav-tab active py-1.5 rounded-lg font-medium text-sky-400 bg-slate-800/80 transition flex flex-col items-center">
+        <span>📋</span>
+        <span class="text-[10px] mt-0.5">Dossier</span>
+      </button>
+
+      <button data-tab="tabBracket" class="nav-tab py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex flex-col items-center">
+        <span>⚔️</span>
+        <span class="text-[10px] mt-0.5">The Bracket</span>
+      </button>
+
+      <button data-tab="tabGap" class="nav-tab py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex flex-col items-center">
+        <span>🧭</span>
+        <span class="text-[10px] mt-0.5">Gap Matrix</span>
+      </button>
+
+      <button data-tab="tabDeck" class="nav-tab py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex flex-col items-center">
+        <span>📑</span>
+        <span class="text-[10px] mt-0.5">Sourcebook</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= CLIENT JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    // --- GLOBAL APPLICATION STATE ---
+    const State = {
+      clients: [],
+      activeClient: null,
+      activeSourcebook: null,
+      currentSlide: 1,
+      totalSlides: 10,
+      apiKey: '',
+      model: 'gemini-3.5-flash',
+      sheetId: ''
+    };
+
+    // --- MOCK / DEMO DATA (In case running standalone or testing) ---
+    const DEMO_TTRPG = {
+      clientId: 'client-ttrpg-001',
+      clientName: 'Mythic Forge Games',
+      track: 'ttrpg_indie',
+      maturityTier: 1,
+      thoughtLeadershipScore: 5.4,
+      slide1_TitleScope: {
+        title: 'THE SESSION ZERO SOURCEBOOK',
+        clientName: 'Mythic Forge Games',
+        trackLabel: 'TTRPG & Indie Game Studio Track',
+        executiveAdvisor: 'Session Zero Solutions — Competitive Intelligence Practice',
+        scopeSummary: '10-Slide Strategic Visibility Audit, 5-Player Bracket Reconnaissance, and 12-Month Phased Crowdfunding Run-Up Roadmap.',
+        auditDate: 'October 2026',
+        speakerNotes: 'Welcome team. With a 6-hour weekly bandwidth ceiling, we cannot fight Paizo or Free League on broad awareness. We must execute asymmetric guerilla positioning around system elegance, dev transparency, and high-conversion pre-launch follower velocity.'
+      },
+      slide2_StrategicBaseline: {
+        title: 'STRATEGIC BASELINE & CAPACITY CEILING',
+        maturityTier: 1,
+        maturityLabel: 'Tier 1: Emerging Traction (Live Itch Store, 320 Newsletter Subs)',
+        weeklyHours: 6,
+        monthlyBudget: 500,
+        capacityVerdict: 'MODERATE BOTTLENECK: High Risk of Burnout on Multi-Channel Cadences',
+        constraintRealityCheck: 'At 6 hours/week, client cannot maintain TikTok, YouTube video essays, and weekly podcasts simultaneously. All capacity must funnel into two engines: 1) Playtest Quickstart feedback loops, and 2) Discord/Email list conversion.',
+        primaryHorizon: 'Achieve 1,800 BackerKit pre-launch followers and convert 30% on Day 1 for "Void Decay".',
+        speakerNotes: 'The number one reason indie TTRPG campaigns stumble is channel dispersion. We lock down your operational scope to high-yield actions only.'
+      },
+      slide3_Bracket: {
+        title: 'THE 5-PLAYER COMPETITIVE BRACKET',
+        entities: [
+          { name: 'Tuesday Knight Games', role: 'aspirational_1', roleLabel: 'Aspirational Leader #1', websiteOrHandle: 'tuesdayknightgames.com', authorityScore: 9.1, audienceScale: '28k Backers, 9k Discord', primaryBattleground: 'System prestige (Mothership), viral box sets', coreStrength: 'Iconic graphic design hierarchy, massive word-of-mouth', criticalVulnerabilityOrGap: 'Long fulfillment latency on reprints; focus on big box sets', evidenceBadge: 'Ennie Gold Winner' },
+          { name: 'Melsonian Arts Council', role: 'aspirational_2', roleLabel: 'Aspirational Leader #2', websiteOrHandle: 'melsonianartscouncil.co.uk', authorityScore: 8.4, audienceScale: '12k Newsletter, Hardcover Imprint', primaryBattleground: 'Artisanal print quality, surreal fantasy niche', coreStrength: 'Literary prestige, cult following', criticalVulnerabilityOrGap: 'Minimal active digital playtest community', evidenceBadge: 'Pioneered Art-Punk TTRPG' },
+          { name: 'Mythic Forge Games', role: 'client', roleLabel: 'Center Anchor (Client)', websiteOrHandle: 'mythicforgegames.itch.io', authorityScore: 5.4, audienceScale: '320 Email Subs, 410 Discord Members', primaryBattleground: 'Rules-light psychological horror, modular GM tools', coreStrength: 'Tight mechanical design, 85% playtest survey return rate', criticalVulnerabilityOrGap: 'Invisible outside itch.io; zero Actual Play streamer relationships', evidenceBadge: '4.9★ Average Rating' },
+          { name: 'Cryptic Relic Press', role: 'lateral_1', roleLabel: 'Lateral Competitor #1', websiteOrHandle: 'crypticrelic.io', authorityScore: 5.8, audienceScale: '850 Email Subs, 700 Followers', primaryBattleground: 'Sci-fi grimdark pamphlets, itch jams', coreStrength: 'Aggressive itch bundle participation and monthly devlogs', criticalVulnerabilityOrGap: 'Weak graphic design readability; past campaign delays', evidenceBadge: 'Funded $18k on BackerKit' },
+          { name: 'Iron Sigil Games', role: 'lateral_2', roleLabel: 'Lateral Competitor #2', websiteOrHandle: 'ironsigil.substack.com', authorityScore: 5.1, audienceScale: '1.1k Substack Subs, 350 Bluesky', primaryBattleground: 'Game design theory blogging, Substack TTRPG network', coreStrength: 'Strong written GM advice essays linked on Reddit', criticalVulnerabilityOrGap: 'Never launched a physical print run; no physical fulfillment', evidenceBadge: 'Featured on Indie RPG Newsletter' }
+        ],
+        strategicTakeaway: 'The client sits in the sweet spot between Cryptic Relic (who has distribution but sloppy production) and Iron Sigil (who has essays but no commercial fulfillment). By packaging superior layout design with an active playtest preview, Mythic Forge can absorb both audiences.',
+        speakerNotes: 'Look at the bracket. Tuesday Knight is unreachable in 12 months, but Cryptic Relic is your immediate lateral prey.'
+      },
+      slide4_DeepDive: {
+        title: 'COMPETITIVE DEEP DIVE (OWNED & EARNED MEDIA)',
+        channels: [
+          { channel: 'Owned: Itch.io Storefront UX', clientStatus: 'Basic itch page, unbranded default theme, buried download links', aspirationalBenchmark: 'Custom CSS aesthetic, animated gif previews, single-click ashcan download', lateralBenchmark: 'Standard itch styling, periodic game jam submissions', strategicAssessment: 'CRITICAL UPGRADE: Redesign itch page with custom CSS palette, prominent playtest download banner, and BackerKit teaser.' },
+          { channel: 'Owned: Email & Discord Velocity', clientStatus: '320 subscribers, emails sent once every 2 months, no automated welcome series', aspirationalBenchmark: 'Fortnightly development dispatch with print-and-play modules; 28% open rate', lateralBenchmark: 'Sporadic emails only during active crowdfunding pushes', strategicAssessment: 'HIGH LEVERAGE: Implement 3-part automated welcome sequence offering instant 12-page "Void Decay Ashcan Edition".' },
+          { channel: 'Earned: Actual Play (AP) Coverage', clientStatus: 'Zero streaming or podcast AP sessions recorded', aspirationalBenchmark: '3-part AP mini-series on Plus One Exp, stream appearances on 4 mid-tier channels', lateralBenchmark: '1 community stream with poor audio fidelity', strategicAssessment: 'WHITESPACE: Target 3 niche horror AP channels (500-3k viewers) with ready-to-run 90-minute digital roll20/Foundry module packs.' },
+          { channel: 'Earned: Reddit & Community Endorsement', clientStatus: 'Passive lurker on r/rpg, r/OSR, and Discord channels', aspirationalBenchmark: 'Recognized for distinctive system design posts; 200+ upvote design retrospectives', lateralBenchmark: 'Self-promotional link dumping with low community goodwill', strategicAssessment: 'VALUE-FIRST ENGAGEMENT: Publish 2 teardown essays analyzing psychological tension mechanics without sales pitches.' }
+        ],
+        speakerNotes: 'Notice the glaring hole in Earned Media: zero Actual Play presence. 42% of indie TTRPG backers discover new systems through APs.'
+      },
+      slide5_GapMatrix: {
+        title: 'GAP & WHITESPACE MATRIX: THE 3-COLUMN DIAGNOSTIC',
+        diagnostic: {
+          doingWell: [
+            { title: 'Mechanical Tightness & Tension Loop', detail: 'Stress & panic mechanic in Void Decay received 89% positive feedback across 34 external playtest groups.' },
+            { title: 'Community Response Velocity', detail: 'Client answers playtest feedback in Discord within 3 hours, building fierce advocate loyalty.' },
+            { title: 'Artistic Direction & Layout Clarity', detail: 'High-contrast black-and-white risograph layout aesthetic stands out against muddy fantasy art.' }
+          ],
+          doingBetter: [
+            { title: 'Pre-Campaign Landing Page Conversion', competitor: 'Cryptic Relic Press', detail: 'Capturing 180 new pre-launch followers per month by gating printable creature cards.', counterTactic: 'Release a free 1-page "Panic Chart" PDF on DriveThruRPG gating BackerKit pre-launch follow.' },
+            { title: 'Convention Ashcan Distribution', competitor: 'Melsonian Arts Council', detail: 'Distributing 300 cheap staple-bound zines at UK Games Expo with QR code hooks.', counterTactic: 'Print 150 low-cost ($1.10/unit) 8-page preview zines for local indie convention & FLGS game nights.' }
+          ],
+          needToAddWhitespace: [
+            { title: 'VTT (Virtual Tabletop) Ready-to-Run Asset Pack', rationale: 'Neither lateral competitor offers pre-configured Foundry VTT or Alchemy RPG manifests. 62% of horror groups play online.', commercialValue: 'Doubles addressable backer market at low incremental cost ($300 development time).' },
+            { title: 'Third-Party Creator License', rationale: 'Launch an open license day 1, inviting indie writers to publish adventures and cross-promote.', commercialValue: 'Free viral ecosystem expansion, identical to Mothership and Mörk Borg playbook.' }
+          ]
+        },
+        speakerNotes: 'The whitespace is clear: VTT readiness and open licensing.'
+      },
+      slide6_ICP: {
+        title: 'IDEAL CUSTOMER PROFILE (ICP) DOSSIER',
+        icp: {
+          personaName: 'The Time-Starved Horror GM ("Curator Cameron")',
+          demographics: 'Age 27-42, professional working in tech/creative, 1-2 gaming sessions per month, budget $40-$100 per campaign.',
+          corePainPoints: [
+            'Dread of spending 4 hours prepping monster statblocks for a 3-hour game session.',
+            'Burned by 5e bloat; craves tactile, deadly, rules-light cinematic experiences.',
+            'Frustrated by Kickstarter projects delayed 18+ months with poor communication.'
+          ],
+          buyingOrBackingTriggers: [
+            'Free, fully playable 15-minute quickstart PDF demonstrating clean layout design.',
+            'High-prestige physical artifact (foil cover, sewn binding, or riso-print aesthetic).',
+            'Transparent production timeline with manuscript already 90% written before launch.'
+          ],
+          primaryHangoutsAndChannels: ['Discord: Indie RPG Community, Mothership Discord', 'Reddit: r/rpg, r/osr', 'Podcasts: Mud & Blood, Fear of a Black Dragon'],
+          antiPersona: 'The "5e System Loyalist" who demands 300-page rulebooks, or the "Miniature Painter" expecting 40 plastic miniatures.'
+        },
+        speakerNotes: 'Do not dilute your messaging trying to appeal to D&D 5e players. Your customer is "Curator Cameron".'
+      },
+      slide7_Positioning: {
+        title: 'DIFFERENTIATED POSITIONING & ELEVATOR PITCHES',
+        positioning: {
+          categoryAnchor: 'The Zero-Prep Sci-Fi Horror Survival TTRPG',
+          tenSecondElevatorPitch: 'Void Decay is a rules-light tabletop RPG where crew panic is as lethal as the void. Designed for exhausted GMs who want to run pulse-pounding psychological horror in under 15 minutes of prep.',
+          contrastWedgeAgainstRivals: 'Unlike Mothership, which requires separate core box sets and survival tables, Void Decay condenses all procedures onto a single GM screen and character passport—playable straight out of the envelope.',
+          uniqueValueProposition: 'Two-page rules, zero prep tables, and visceral tactile components engineered specifically for unforgettable one-shot terror.',
+          proofPillars: ['34 blind playtests logged with average prep time <11 minutes', '100% human-crafted prose and layout', 'Manuscript 90% finished before launch']
+        },
+        speakerNotes: 'Memorize the contrast wedge: "Unlike complex boxed sets, Void Decay is playable straight out of an envelope in 15 minutes."'
+      },
+      slide8_Roadmap: {
+        title: '12-MONTH PHASED VISIBILITY ROADMAP',
+        phases: [
+          { phase: 1, name: 'Foundation & Playtest Capture', monthRange: 'Months 1 - 3', focus: 'Seal funnel leaks; build core ashcan engine.', keyMilestones: ['Publish 16-page Ashcan PDF on Itch.io & DTRPG', 'Deploy automated 3-email onboarding sequence', 'Run 6 curated Discord playtests; harvest 10 backer quotes'] },
+          { phase: 2, name: 'Earned Authority & Lateral Outflanking', monthRange: 'Months 4 - 6', focus: 'Secure third-party validation and streamer exposure.', keyMilestones: ['Pitch 5 niche indie AP podcasts with turnkey one-shots', 'Release free Foundry VTT and Alchemy demo manifests', 'Publish 2 deep-dive design essays on r/rpg'] },
+          { phase: 3, name: 'Pre-Launch Ignition & BackerKit Run-Up', monthRange: 'Months 7 - 9', focus: 'Drive follower count to 1,500+ before launch.', keyMilestones: ['Launch BackerKit teaser page with milestone rewards', 'Coordinate 3 Actual Play recordings for launch week', 'Run $300 targeted Meta/Reddit ad test targeting sci-fi gamers'] },
+          { phase: 4, name: 'Campaign Execution & Fulfillment', monthRange: 'Months 10 - 12', focus: 'Deliver 30-day live campaign sprint and retain backers.', keyMilestones: ['30-day live crowdfunding sprint with weekly transparent updates', 'Lock in physical pledge manager surveys and print proofs', 'Announce Third-Party Creator Jam to sustain momentum'] }
+        ],
+        speakerNotes: 'In crowdfunding, Day 1 funds 40% of your total. We do not hit launch until we have 1,500 verified BackerKit followers locked in.'
+      },
+      slide9_ChannelWaterfall: {
+        title: 'CONTENT & CHANNEL PRIORITIZATION WATERFALL',
+        waterfall: {
+          tier1Primary: { channel: 'Owned Playtest Funnel (Itch.io Ashcan + Discord)', cadence: 'Bi-weekly patch notes & monthly ashcan release', allocatedHoursWeekly: 3.5, objective: 'Convert casual readers into active playtesters.' },
+          tier2Secondary: { channel: 'Direct Email Dispatch ("The Void Broadcast")', cadence: 'Twice monthly (1st & 15th)', allocatedHoursWeekly: 1.5, objective: 'Nurture pre-launch list with high-value GM tables.' },
+          tier3Maintenance: { channel: 'Bluesky / Twitter & Reddit Engagement', cadence: '3 brief tactical replies per week', allocatedHoursWeekly: 1.0, objective: 'Answer GM problem threads; share graphic excerpts.' },
+          hoursRealityCheck: { totalRequiredHours: 6.0, clientCapacityHours: 6.0, sustainable: true, mitigationStrategy: 'Zero video production. Repurpose Discord patch notes directly into email copy.' }
+        },
+        speakerNotes: 'Total weekly hours: exactly 6.0. No fluff.'
+      },
+      slide10_AlliesEcosystem: {
+        title: 'STRATEGIC ALLIES & REFERRAL ECOSYSTEM',
+        allies: {
+          nonCompetingPartners: [
+            { partnerType: 'Indie Cartographers & VTT Mapmakers', exampleTargets: 'Miska’s Maps, Fragged Maps', referralMechanism: 'Co-bundle deck plans in Void Decay Quickstart with cross-links.' },
+            { partnerType: 'Horror Ambient Sound Designers', exampleTargets: 'Cryo Chamber, Tabletop Audio', referralMechanism: 'Official Spotify playlist link on character sheets.' },
+            { partnerType: 'Third-Party Zine Publishers', exampleTargets: 'Exalted Funeral, Spear Witch', referralMechanism: 'Fulfillment inclusion or featured banner in zine mailers.' }
+          ],
+          ecosystemHubs: [
+            { hubName: 'NSR Discord & Reddit Community', accessMethod: 'Share open-source modular panic mechanics.', expectedYield: 'Authority positioning among 4,000+ tabletop designers.' },
+            { hubName: 'BackerKit Crowdfunding By Tabletop Community', accessMethod: 'Participate in Cross-Collaboration newsletter swaps.', expectedYield: '150-300 direct crossover backers.' }
+          ],
+          referralLoopDesign: 'The "Signal in the Static" Referral Mechanic: Backers who refer 2 fellow players unlock an exclusive digital soundtrack EP and bonus modular solo mission.'
+        },
+        speakerNotes: 'Indie game dev is not a zero-sum game. When you cross-promote with an indie mapmaker, you borrow their 10k audience for free.'
+      },
+      milestones: [
+        { id: 'm-1', phase: 1, phaseName: 'Foundation & Playtest Capture', targetMonthRange: 'Months 1 - 3', description: 'Publish 16-page "Void Decay Ashcan PDF" on Itch.io and DTRPG', targetMonth: 1, completed: true, estimatedWeeklyHours: 4 },
+        { id: 'm-2', phase: 1, phaseName: 'Foundation & Playtest Capture', targetMonthRange: 'Months 1 - 3', description: 'Set up automated 3-email onboarding sequence in MailerLite', targetMonth: 2, completed: true, estimatedWeeklyHours: 2 },
+        { id: 'm-3', phase: 1, phaseName: 'Foundation & Playtest Capture', targetMonthRange: 'Months 1 - 3', description: 'Run 6 external blind playtest sessions; gather 10 backer endorsements', targetMonth: 3, completed: false, estimatedWeeklyHours: 3 },
+        { id: 'm-4', phase: 2, phaseName: 'Earned Authority & Lateral Outflanking', targetMonthRange: 'Months 4 - 6', description: 'Pitch 5 niche indie AP podcasts with turnkey one-shots', targetMonth: 4, completed: false, estimatedWeeklyHours: 2 },
+        { id: 'm-5', phase: 2, phaseName: 'Earned Authority & Lateral Outflanking', targetMonthRange: 'Months 4 - 6', description: 'Release free Foundry VTT and Alchemy demo manifests', targetMonth: 5, completed: false, estimatedWeeklyHours: 3 },
+        { id: 'm-6', phase: 2, phaseName: 'Earned Authority & Lateral Outflanking', targetMonthRange: 'Months 4 - 6', description: 'Publish 2 deep-dive system design teardowns on r/rpg', targetMonth: 6, completed: false, estimatedWeeklyHours: 2 },
+        { id: 'm-7', phase: 3, phaseName: 'Pre-Launch Ignition & BackerKit Run-Up', targetMonthRange: 'Months 7 - 9', description: 'Launch official BackerKit pre-launch teaser page with milestone rewards', targetMonth: 7, completed: false, estimatedWeeklyHours: 3 },
+        { id: 'm-8', phase: 3, phaseName: 'Pre-Launch Ignition & BackerKit Run-Up', targetMonthRange: 'Months 7 - 9', description: 'Coordinate 3 Actual Play recordings during launch countdown week', targetMonth: 8, completed: false, estimatedWeeklyHours: 2 },
+        { id: 'm-9', phase: 3, phaseName: 'Pre-Launch Ignition & BackerKit Run-Up', targetMonthRange: 'Months 7 - 9', description: 'Run $300 targeted Meta/Reddit ad test targeting horror gamers', targetMonth: 9, completed: false, estimatedWeeklyHours: 1 },
+        { id: 'm-10', phase: 4, phaseName: 'Campaign Execution & Fulfillment', targetMonthRange: 'Months 10 - 12', description: 'Execute 30-day live crowdfunding campaign sprint', targetMonth: 10, completed: false, estimatedWeeklyHours: 5 },
+        { id: 'm-11', phase: 4, phaseName: 'Campaign Execution & Fulfillment', targetMonthRange: 'Months 10 - 12', description: 'Lock in pledge surveys and offset print proof checks', targetMonth: 11, completed: false, estimatedWeeklyHours: 3 },
+        { id: 'm-12', phase: 4, phaseName: 'Campaign Execution & Fulfillment', targetMonthRange: 'Months 10 - 12', description: 'Announce Third-Party Creator Jam to sustain ecosystem momentum', targetMonth: 12, completed: false, estimatedWeeklyHours: 2 }
+      ]
+    };
+
+    // --- DOM ELEMENT REFERENCES ---
+    const dom = {
+      clientSelect: document.getElementById('clientSelect'),
+      weeklyHours: document.getElementById('weeklyHours'),
+      weeklyHoursLabel: document.getElementById('weeklyHoursLabel'),
+      monthlyBudget: document.getElementById('monthlyBudget'),
+      monthlyBudgetLabel: document.getElementById('monthlyBudgetLabel'),
+      formDossier: document.getElementById('formDossier'),
+      btnRunAudit: document.getElementById('btnRunAudit'),
+      btnSaveProfile: document.getElementById('btnSaveProfile'),
+      auditProgress: document.getElementById('auditProgress'),
+      progressBar: document.getElementById('progressBar'),
+      progressStageTitle: document.getElementById('progressStageTitle'),
+      progressStageDesc: document.getElementById('progressStageDesc'),
+      bracketCardsGrid: document.getElementById('bracketCardsGrid'),
+      bracketTakeaway: document.getElementById('bracketTakeaway'),
+      scoreBadge: document.getElementById('scoreBadge'),
+      channelsTableBody: document.getElementById('channelsTableBody'),
+      doingWellList: document.getElementById('doingWellList'),
+      doingBetterList: document.getElementById('doingBetterList'),
+      whitespaceList: document.getElementById('whitespaceList'),
+      slideCanvasContent: document.getElementById('slideCanvasContent'),
+      slideIndicator: document.getElementById('slideIndicator'),
+      slideFooterPage: document.getElementById('slideFooterPage'),
+      slideJumpDots: document.getElementById('slideJumpDots'),
+      btnPrevSlide: document.getElementById('btnPrevSlide'),
+      btnNextSlide: document.getElementById('btnNextSlide'),
+      notesBody: document.getElementById('notesBody'),
+      btnToggleNotes: document.getElementById('btnToggleNotes'),
+      btnExportSlides: document.getElementById('btnExportSlides'),
+      btnDownloadPdf: document.getElementById('btnDownloadPdf'),
+      btnSaveToCrm: document.getElementById('btnSaveToCrm'),
+      btnCopyJson: document.getElementById('btnCopyJson'),
+      btnHamburger: document.getElementById('btnHamburger'),
+      crmDrawer: document.getElementById('crmDrawer'),
+      drawerOverlay: document.getElementById('drawerOverlay'),
+      btnCloseDrawer: document.getElementById('btnCloseDrawer'),
+      btnSettings: document.getElementById('btnSettings'),
+      settingsModal: document.getElementById('settingsModal'),
+      btnCloseSettings: document.getElementById('btnCloseSettings'),
+      btnSaveSettings: document.getElementById('btnSaveSettings'),
+      btnInitDb: document.getElementById('btnInitDb'),
+      btnLoadDemo: document.getElementById('btnLoadDemo'),
+      btnLoadTtrpgDemo: document.getElementById('btnLoadTtrpgDemo'),
+      btnLoadTradeDemo: document.getElementById('btnLoadTradeDemo'),
+      btnNewClient: document.getElementById('btnNewClient'),
+      btnViewSlides: document.getElementById('btnViewSlides'),
+      btnViewJourney: document.getElementById('btnViewJourney'),
+      slidesViewContainer: document.getElementById('slidesViewContainer'),
+      journeyViewContainer: document.getElementById('journeyViewContainer'),
+      journeyPhasesGrid: document.getElementById('journeyPhasesGrid'),
+      capacityStatusText: document.getElementById('capacityStatusText')
+    };
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+      initSlideJumpDots();
+      loadInitialData();
+    });
+
+    function setupEventListeners() {
+      // Sliders reactive labels
+      dom.weeklyHours.addEventListener('input', (e) => {
+        dom.weeklyHoursLabel.textContent = `${e.target.value} Hours / Week`;
+      });
+      dom.monthlyBudget.addEventListener('input', (e) => {
+        dom.monthlyBudgetLabel.textContent = `$${Number(e.target.value).toLocaleString()} / Month`;
+      });
+
+      // Tab navigation
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      // Slide navigation
+      dom.btnPrevSlide.addEventListener('click', () => {
+        if (State.currentSlide > 1) {
+          State.currentSlide--;
+          renderSlide(State.currentSlide);
+        }
+      });
+      dom.btnNextSlide.addEventListener('click', () => {
+        if (State.currentSlide < State.totalSlides) {
+          State.currentSlide++;
+          renderSlide(State.currentSlide);
+        }
+      });
+
+      // View switcher: Slides vs Journey
+      dom.btnViewSlides.addEventListener('click', () => {
+        dom.slidesViewContainer.classList.remove('hidden');
+        dom.journeyViewContainer.classList.add('hidden');
+        dom.btnViewSlides.className = 'px-3 py-1 text-xs font-semibold bg-sky-500 text-slate-950 rounded transition';
+        dom.btnViewJourney.className = 'px-3 py-1 text-xs font-medium text-slate-300 hover:text-white rounded transition';
+      });
+      dom.btnViewJourney.addEventListener('click', () => {
+        dom.slidesViewContainer.classList.add('hidden');
+        dom.journeyViewContainer.classList.remove('hidden');
+        dom.btnViewJourney.className = 'px-3 py-1 text-xs font-semibold bg-sky-500 text-slate-950 rounded transition';
+        dom.btnViewSlides.className = 'px-3 py-1 text-xs font-medium text-slate-300 hover:text-white rounded transition';
+        renderJourneyChecklist();
+      });
+
+      // Toggle Notes
+      dom.btnToggleNotes.addEventListener('click', () => {
+        dom.notesBody.classList.toggle('hidden');
+      });
+
+      // Drawer Open / Close
+      dom.btnHamburger.addEventListener('click', openDrawer);
+      dom.btnCloseDrawer.addEventListener('click', closeDrawer);
+      dom.drawerOverlay.addEventListener('click', closeDrawer);
+
+      // Settings Modal
+      dom.btnSettings.addEventListener('click', () => dom.settingsModal.classList.remove('hidden'));
+      dom.btnCloseSettings.addEventListener('click', () => dom.settingsModal.classList.add('hidden'));
+      dom.btnSaveSettings.addEventListener('click', saveSettings);
+
+      // Client Selection Change
+      dom.clientSelect.addEventListener('change', (e) => {
+        const id = e.target.value;
+        if (id) selectClientById(id);
+      });
+
+      // New Client
+      dom.btnNewClient.addEventListener('click', () => {
+        resetDossierForm();
+        switchTab('tabDossier');
+      });
+
+      // Load Demos
+      dom.btnLoadDemo.addEventListener('click', () => loadDemoData('ttrpg'));
+      dom.btnLoadTtrpgDemo.addEventListener('click', () => loadDemoData('ttrpg'));
+      dom.btnLoadTradeDemo.addEventListener('click', () => loadDemoData('trade'));
+
+      // Form Submit -> Run Audit
+      dom.formDossier.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleRunAudit();
+      });
+
+      // Save Client Profile only
+      dom.btnSaveProfile.addEventListener('click', () => handleSaveClientProfile());
+
+      // Export Actions
+      dom.btnExportSlides.addEventListener('click', handleExportSlides);
+      dom.btnDownloadPdf.addEventListener('click', () => window.print());
+      dom.btnSaveToCrm.addEventListener('click', handleSaveMilestonesToCrm);
+      dom.btnCopyJson.addEventListener('click', copyAuditJson);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        if (btn.dataset.tab === tabId) {
+          btn.className = 'nav-tab active py-1.5 rounded-lg font-medium text-sky-400 bg-slate-800/80 transition flex flex-col items-center';
+        } else {
+          btn.className = 'nav-tab py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex flex-col items-center';
+        }
+      });
+      const target = document.getElementById(tabId);
+      if (target) target.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function initSlideJumpDots() {
+      dom.slideJumpDots.innerHTML = '';
+      for (let i = 1; i <= State.totalSlides; i++) {
+        const dot = document.createElement('button');
+        dot.textContent = i;
+        dot.className = `w-6 h-6 text-[10px] font-bold rounded flex items-center justify-center transition ${i === 1 ? 'bg-sky-500 text-slate-950' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`;
+        dot.addEventListener('click', () => {
+          State.currentSlide = i;
+          renderSlide(i);
+        });
+        dom.slideJumpDots.appendChild(dot);
+      }
+    }
+
+    function updateJumpDots(activeNum) {
+      const dots = dom.slideJumpDots.querySelectorAll('button');
+      dots.forEach((dot, idx) => {
+        if (idx + 1 === activeNum) {
+          dot.className = 'w-6 h-6 text-[10px] font-bold rounded flex items-center justify-center transition bg-sky-500 text-slate-950';
+        } else {
+          dot.className = 'w-6 h-6 text-[10px] font-bold rounded flex items-center justify-center transition bg-slate-800 text-slate-400 hover:bg-slate-700';
+        }
+      });
+    }
+
+    function openDrawer() {
+      dom.drawerOverlay.classList.remove('hidden');
+      dom.crmDrawer.classList.remove('-translate-x-full');
+      refreshGlobalDashboard();
+    }
+
+    function closeDrawer() {
+      dom.drawerOverlay.classList.add('hidden');
+      dom.crmDrawer.classList.add('-translate-x-full');
+    }
+
+    // --- DATA LOADING & COMMUNICATION ---
+    function isGoogleAppsScript() {
+      return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+
+    function loadInitialData() {
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler(onClientsLoaded)
+          .withFailureHandler(onServerError)
+          .getClients();
+      } else {
+        // Fallback or Local Preview: pre-populate demo clients
+        onClientsLoaded([
+          { id: 'client-ttrpg-001', name: 'Mythic Forge Games', track: 'ttrpg_indie', maturityTier: 1, primaryHorizon: 'Launch & fund $45k BackerKit campaign', weeklyHours: 6, monthlyBudget: 500, websiteUrl: 'https://mythicforgegames.itch.io', status: 'Audited' },
+          { id: 'client-trade-002', name: 'Apex Mechanical & HVAC', track: 'trade_contractor', maturityTier: 1, primaryHorizon: '120 recurring maintenance agreements and local pack rank', weeklyHours: 4, monthlyBudget: 1200, websiteUrl: 'https://apexmechanical-hvac.com', status: 'Audited' }
+        ]);
+        // Default to TTRPG demo
+        loadDemoData('ttrpg');
+      }
+    }
+
+    function onClientsLoaded(clientsList) {
+      State.clients = clientsList || [];
+      dom.clientSelect.innerHTML = '<option value="">Select Client...</option>';
+      State.clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.name} (${c.track === 'trade_contractor' ? 'Trade' : 'TTRPG'})`;
+        dom.clientSelect.appendChild(opt);
+      });
+      refreshGlobalDashboard();
+    }
+
+    function selectClientById(id) {
+      const client = State.clients.find(c => c.id === id);
+      if (!client) return;
+      State.activeClient = client;
+
+      // Populate form
+      document.getElementById('clientName').value = client.name;
+      document.getElementById('clientUrl').value = client.websiteUrl || '';
+      document.getElementById('primaryHorizon').value = client.primaryHorizon || '';
+      dom.weeklyHours.value = client.weeklyHours || 6;
+      dom.weeklyHoursLabel.textContent = `${client.weeklyHours || 6} Hours / Week`;
+      dom.monthlyBudget.value = client.monthlyBudget || 500;
+      dom.monthlyBudgetLabel.textContent = `$${Number(client.monthlyBudget || 500).toLocaleString()} / Month`;
+      
+      const trackRadio = document.querySelector(`input[name="operationalTrack"][value="${client.track}"]`);
+      if (trackRadio) trackRadio.checked = true;
+
+      const tierRadio = document.querySelector(`input[name="maturityTier"][value="${client.maturityTier}"]`);
+      if (tierRadio) tierRadio.checked = true;
+
+      // Fetch Audit
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler((audits) => {
+            if (audits && audits.length > 0) {
+              applySourcebookData(audits[audits.length - 1].auditJson);
+            }
+          })
+          .getAudits(client.id);
+      } else {
+        if (client.track === 'trade_contractor') {
+          loadDemoData('trade');
+        } else {
+          loadDemoData('ttrpg');
+        }
+      }
+    }
+
+    function loadDemoData(trackType) {
+      if (trackType === 'trade') {
+        const tradeData = JSON.parse(JSON.stringify(DEMO_TTRPG));
+        tradeData.clientId = 'client-trade-002';
+        tradeData.clientName = 'Apex Mechanical & HVAC Solutions';
+        tradeData.track = 'trade_contractor';
+        tradeData.thoughtLeadershipScore = 6.2;
+        tradeData.slide1_TitleScope.clientName = 'Apex Mechanical & HVAC Solutions';
+        tradeData.slide1_TitleScope.trackLabel = 'Trade Contractor & Local SBO Track';
+        tradeData.slide1_TitleScope.scopeSummary = '10-Slide Local Competitive Intelligence Audit, 25-Mile Service Radius Reconnaissance, and 12-Month Phased Commercial Acquisition Roadmap.';
+        tradeData.slide2_StrategicBaseline.weeklyHours = 4;
+        tradeData.slide2_StrategicBaseline.monthlyBudget = 1200;
+        tradeData.slide2_StrategicBaseline.maturityLabel = 'Tier 1: Emerging Traction (8 Field Trucks, 62 Google Reviews)';
+        tradeData.slide2_StrategicBaseline.capacityVerdict = 'TIGHT CAPACITY: Internal Marketing Must Be Completely Friction-Free';
+        tradeData.slide2_StrategicBaseline.constraintRealityCheck = 'Owner and office manager only have 4 hours per week combined for business growth. No blogging. All effort must automate review collection at dispatch and establish 3 high-volume B2B referral channels.';
+        tradeData.slide3_Bracket.entities = [
+          { name: 'Heritage Heating & Air', role: 'aspirational_1', roleLabel: 'Aspirational Leader #1', websiteOrHandle: 'heritageaircomfort.com', authorityScore: 8.8, audienceScale: '580 Reviews (4.8★), 24 Trucks', primaryBattleground: 'High-volume residential emergency service, radio blitz', coreStrength: 'Dominant local pack brand recall; same-day dispatch guarantee', criticalVulnerabilityOrGap: 'High pricing markup due to heavy ad spend; high technician turnover', evidenceBadge: 'Rank #1 in Metro Local 3-Pack' },
+          { name: 'Benchmark Climate Masters', role: 'aspirational_2', roleLabel: 'Aspirational Leader #2', websiteOrHandle: 'benchmarkclimatemasters.com', authorityScore: 7.9, audienceScale: '310 Reviews (4.9★), Commercial', primaryBattleground: 'B2B mechanical contracts, LEED retrofit credentials', coreStrength: 'Strong engineering reputation; long-term institutional contracts', criticalVulnerabilityOrGap: 'Completely ignores residential high-efficiency mini-splits', evidenceBadge: 'Carrier Factory Authorized' },
+          { name: 'Apex Mechanical & HVAC', role: 'client', roleLabel: 'Center Anchor (Client)', websiteOrHandle: 'apexmechanical-hvac.com', authorityScore: 6.2, audienceScale: '62 Reviews (4.9★), 8 Trucks', primaryBattleground: 'High-efficiency heat pump retrofits, ductless mini-splits', coreStrength: 'Superior diagnostic expertise, pristine 4.9★ satisfaction', criticalVulnerabilityOrGap: 'Review volume lags leaders by 5x; zero automated post-service SMS review triggers', evidenceBadge: 'Mitsubishi Diamond Elite' },
+          { name: 'Precision Air Pros', role: 'lateral_1', roleLabel: 'Lateral Competitor #1', websiteOrHandle: 'precisionairpros.net', authorityScore: 6.4, audienceScale: '94 Reviews (4.6★), 6 Trucks', primaryBattleground: 'Residential tune-up coupons ($49 specials), Google PPC', coreStrength: 'Fast quote turnaround via chat widget', criticalVulnerabilityOrGap: 'Bait-and-switch complaints; zero commercial capability', evidenceBadge: 'Angi Super Service Award' },
+          { name: 'Vanguard Heating & Cooling', role: 'lateral_2', roleLabel: 'Lateral Competitor #2', websiteOrHandle: 'vanguardhvac-service.com', authorityScore: 5.7, audienceScale: '45 Reviews (4.7★), 4 Trucks', primaryBattleground: 'New construction residential rough-ins', coreStrength: 'Low overhead and low bid prices for tract homes', criticalVulnerabilityOrGap: 'Zero retail direct-to-consumer brand; dependent on 2 GCs', evidenceBadge: 'BBB Accredited A+' }
+        ];
+        tradeData.slide3_Bracket.strategicTakeaway = 'Apex’s pristine 4.9★ rating is your greatest weapon. Automating post-job SMS review triggers will close the gap on Heritage within 90 days.';
+        tradeData.slide7_Positioning.positioning.categoryAnchor = 'The Certified Heat Pump & Clean Air Authority';
+        tradeData.slide7_Positioning.positioning.tenSecondElevatorPitch = 'Apex Mechanical delivers master-level heat pump retrofits and transparent commercial HVAC solutions. No commission-hungry salesmen—just certified master technicians who fix what others misdiagnose.';
+        tradeData.slide7_Positioning.positioning.contrastWedgeAgainstRivals = 'Unlike corporate private-equity chains that dispatch commissioned salesmen, Apex sends licensed master tradesmen who give honest diagnostic photo proof and file your utility rebates for you.';
+        applySourcebookData(tradeData);
+      } else {
+        applySourcebookData(DEMO_TTRPG);
+      }
+    }
+
+    function applySourcebookData(data) {
+      State.activeSourcebook = data;
+      State.activeClient = {
+        id: data.clientId,
+        name: data.clientName,
+        track: data.track,
+        maturityTier: data.maturityTier,
+        weeklyHours: data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.weeklyHours : 6,
+        monthlyBudget: data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.monthlyBudget : 500,
+        primaryHorizon: data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.primaryHorizon : ''
+      };
+
+      // Populate Form
+      document.getElementById('clientName').value = data.clientName;
+      document.getElementById('primaryHorizon').value = data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.primaryHorizon : '';
+      dom.weeklyHours.value = data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.weeklyHours : 6;
+      dom.weeklyHoursLabel.textContent = `${dom.weeklyHours.value} Hours / Week`;
+      dom.monthlyBudget.value = data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.monthlyBudget : 500;
+      dom.monthlyBudgetLabel.textContent = `$${Number(dom.monthlyBudget.value).toLocaleString()} / Month`;
+      
+      const trackRadio = document.querySelector(`input[name="operationalTrack"][value="${data.track}"]`);
+      if (trackRadio) trackRadio.checked = true;
+
+      const tierRadio = document.querySelector(`input[name="maturityTier"][value="${data.maturityTier}"]`);
+      if (tierRadio) tierRadio.checked = true;
+
+      // Populate Score Badge
+      if (dom.scoreBadge) {
+        dom.scoreBadge.textContent = `${data.thoughtLeadershipScore || 5.0} / 10`;
+      }
+
+      // Render Bracket
+      renderBracketTab(data);
+
+      // Render Gap Matrix
+      renderGapMatrixTab(data);
+
+      // Render Slide
+      renderSlide(State.currentSlide);
+
+      // Render Journey Checklist
+      renderJourneyChecklist();
+    }
+
+    // --- TAB RENDERING LOGIC ---
+    function renderBracketTab(data) {
+      const entities = (data.slide3_Bracket && data.slide3_Bracket.entities) ? data.slide3_Bracket.entities : [];
+      
+      const t1 = document.getElementById('bracketTier1');
+      const t2 = document.getElementById('bracketTier2');
+      const t3 = document.getElementById('bracketTier3');
+      
+      if (!t1 || !t2 || !t3) return;
+      t1.innerHTML = '';
+      t2.innerHTML = '';
+      t3.innerHTML = '';
+
+      function createEntityCard(ent, isClient, badgeColor) {
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border flex flex-col justify-between transition-all ${
+          isClient 
+            ? 'bg-sky-950/50 border-sky-400 ring-2 ring-sky-400/30 shadow-lg shadow-sky-500/10' 
+            : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+        }`;
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider ${badgeColor}">${ent.roleLabel || ent.role}</span>
+              <span class="text-xs font-bold px-1.5 py-0.5 rounded ${isClient ? 'bg-sky-500 text-slate-950' : 'bg-slate-800 text-slate-200'}">${ent.authorityScore || '5.0'}/10</span>
+            </div>
+            <h3 class="text-sm font-bold text-white mb-0.5">${ent.name}</h3>
+            <div class="text-[10px] text-slate-400 truncate mb-2">${ent.websiteOrHandle || ''}</div>
+            
+            <div class="space-y-1.5 text-xs">
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block font-semibold">Audience Scale:</span>
+                <span class="text-slate-300 text-[11px]">${ent.audienceScale || 'N/A'}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block font-semibold">Battleground:</span>
+                <span class="text-slate-300 text-[11px]">${ent.primaryBattleground || 'N/A'}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block font-semibold">Core Strength:</span>
+                <span class="text-emerald-400 text-[11px]">${ent.coreStrength || 'N/A'}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block font-semibold">Vulnerability:</span>
+                <span class="text-red-400 text-[11px]">${ent.criticalVulnerabilityOrGap || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800/80">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700 block text-center truncate">
+              ${ent.evidenceBadge || 'Verified Market Entity'}
+            </span>
+          </div>
+        `;
+        return card;
+      }
+
+      // Group entities by role
+      const aspirational = entities.filter(e => e.role.includes('aspirational'));
+      const seeds = entities.filter(e => e.role.includes('seed'));
+      const clients = entities.filter(e => e.role === 'client');
+      const laterals = entities.filter(e => e.role.includes('lateral'));
+
+      // Tier 1: Aspirational (2 cards)
+      aspirational.forEach(e => t1.appendChild(createEntityCard(e, false, 'text-sky-300')));
+
+      // Tier 2: Seed 1 -> Client -> Seed 2 (3 cards)
+      if (seeds[0]) t2.appendChild(createEntityCard(seeds[0], false, 'text-amber-400'));
+      if (clients[0]) t2.appendChild(createEntityCard(clients[0], true, 'text-sky-300 font-bold'));
+      if (seeds[1]) t2.appendChild(createEntityCard(seeds[1], false, 'text-amber-400'));
+
+      // Tier 3: Lateral (2 cards)
+      laterals.forEach(e => t3.appendChild(createEntityCard(e, false, 'text-purple-300')));
+
+      if (dom.bracketTakeaway && data.slide3_Bracket) {
+        dom.bracketTakeaway.textContent = data.slide3_Bracket.strategicTakeaway || '';
+      }
+    }
+
+    function renderGapMatrixTab(data) {
+      // Channels Table
+      const channels = (data.slide4_DeepDive && data.slide4_DeepDive.channels) ? data.slide4_DeepDive.channels : [];
+      dom.channelsTableBody.innerHTML = '';
+      channels.forEach(ch => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+        tr.innerHTML = `
+          <td class="p-3 font-semibold text-white">${ch.channel}</td>
+          <td class="p-3 text-slate-300">${ch.clientStatus}</td>
+          <td class="p-3 text-slate-400">${ch.aspirationalBenchmark}</td>
+          <td class="p-3 text-emerald-300 font-medium">${ch.strategicAssessment}</td>
+        `;
+        dom.channelsTableBody.appendChild(tr);
+      });
+
+      // 3-Column Diagnostic
+      const diag = (data.slide5_GapMatrix && data.slide5_GapMatrix.diagnostic) ? data.slide5_GapMatrix.diagnostic : { doingWell: [], doingBetter: [], needToAddWhitespace: [] };
+      
+      // Doing Well
+      dom.doingWellList.innerHTML = '';
+      (diag.doingWell || []).forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'p-2.5 rounded-lg bg-slate-950/60 border border-slate-800';
+        el.innerHTML = `
+          <div class="font-bold text-white text-[11px]">${item.title}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${item.detail}</div>
+        `;
+        dom.doingWellList.appendChild(el);
+      });
+
+      // Doing Better
+      dom.doingBetterList.innerHTML = '';
+      (diag.doingBetter || []).forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'p-2.5 rounded-lg bg-slate-950/60 border border-slate-800';
+        el.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-[11px]">${item.title}</span>
+            <span class="text-[9px] text-amber-400 font-mono">${item.competitor}</span>
+          </div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${item.detail}</div>
+          <div class="text-[11px] text-amber-300/90 font-medium mt-1">Counter: ${item.counterTactic}</div>
+        `;
+        dom.doingBetterList.appendChild(el);
+      });
+
+      // Whitespace
+      dom.whitespaceList.innerHTML = '';
+      (diag.needToAddWhitespace || []).forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'p-2.5 rounded-lg bg-slate-950/60 border border-slate-800';
+        el.innerHTML = `
+          <div class="font-bold text-white text-[11px]">${item.title}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${item.rationale}</div>
+          <div class="text-[11px] text-sky-400 font-medium mt-1">Commercial Value: ${item.commercialValue}</div>
+        `;
+        dom.whitespaceList.appendChild(el);
+      });
+    }
+
+    // --- 10-SLIDE INTERACTIVE CANVAS RENDERER ---
+    function renderSlide(slideNum) {
+      if (!State.activeSourcebook) return;
+      const data = State.activeSourcebook;
+
+      dom.slideIndicator.textContent = `Slide ${slideNum} / ${State.totalSlides}`;
+      dom.slideFooterPage.textContent = `Slide ${slideNum} of ${State.totalSlides}`;
+      updateJumpDots(slideNum);
+
+      let html = '';
+      let notes = '';
+
+      switch(slideNum) {
+        case 1: {
+          const s1 = data.slide1_TitleScope || {};
+          notes = s1.speakerNotes || '';
+          html = `
+            <div class="space-y-6">
+              <div class="inline-block px-3 py-1 rounded bg-slate-800 border border-sky-500/30 text-sky-400 text-xs font-bold tracking-widest uppercase">
+                SESSION ZERO SOLUTIONS // STRATEGIC ADVISORY
+              </div>
+              <div class="space-y-2">
+                <h1 contenteditable="true" class="text-3xl sm:text-4xl font-black text-white tracking-tight">${s1.clientName || data.clientName}</h1>
+                <h2 contenteditable="true" class="text-sm sm:text-base font-bold text-sky-400 tracking-wide uppercase">${s1.title || 'THE SESSION ZERO SOURCEBOOK'}</h2>
+                <div class="text-xs text-slate-400">${s1.trackLabel || (data.track === 'trade_contractor' ? 'Trade Contractor & SBO Track' : 'TTRPG & Indie Studio Track')}</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div class="text-xs font-bold uppercase text-slate-300">Commercial Scope & Mandate</div>
+                <p contenteditable="true" class="text-xs sm:text-sm text-slate-300 leading-relaxed">${s1.scopeSummary || 'Strategic Competitive Intelligence Audit & 12-Month Phased Visibility Acceleration.'}</p>
+              </div>
+              <div class="flex items-center justify-between text-xs text-slate-400 pt-4">
+                <div>Executive Advisor: <span class="text-slate-200 font-semibold">${s1.executiveAdvisor || 'Session Zero Solutions'}</span></div>
+                <div>Audit Date: <span class="text-slate-200 font-semibold">${s1.auditDate || 'October 2026'}</span></div>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 2: {
+          const s2 = data.slide2_StrategicBaseline || {};
+          notes = s2.speakerNotes || '';
+          html = `
+            <div class="space-y-5">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">02 // STRATEGIC BASELINE & CAPACITY CEILING</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s2.title || 'Strategic Baseline & Resource Constraints'}</h2>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="text-[10px] uppercase text-slate-400 font-semibold">Weekly Bandwidth</div>
+                  <div contenteditable="true" class="text-lg font-black text-sky-400 mt-0.5">${s2.weeklyHours || 6} Hours / Wk</div>
+                  <div class="text-[10px] text-slate-500">Max execution capacity</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="text-[10px] uppercase text-slate-400 font-semibold">Monthly Budget</div>
+                  <div contenteditable="true" class="text-lg font-black text-emerald-400 mt-0.5">$${s2.monthlyBudget || 500} / Mo</div>
+                  <div class="text-[10px] text-slate-500">Working capital</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="text-[10px] uppercase text-slate-400 font-semibold">Maturity Baseline</div>
+                  <div contenteditable="true" class="text-lg font-black text-amber-400 mt-0.5">Tier ${s2.maturityTier || 1}</div>
+                  <div class="text-[10px] text-slate-400 truncate">${s2.maturityLabel || 'Emerging Traction'}</div>
+                </div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-amber-400">Capacity Verdict: ${s2.capacityVerdict || 'MODERATE BOTTLENECK'}</span>
+                  <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded font-bold">Strict Ceiling</span>
+                </div>
+                <p contenteditable="true" class="text-xs text-slate-300 leading-relaxed">${s2.constraintRealityCheck || 'At stated hours, multi-channel dispersion leads to failure. Lock down high-conversion levers.'}</p>
+                <div class="pt-2 border-t border-slate-800 text-xs">
+                  <span class="text-slate-400 font-semibold">Primary 12-Month Target: </span>
+                  <span contenteditable="true" class="text-white">${s2.primaryHorizon || 'Achieve commercial market authority.'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 3: {
+          const s3 = data.slide3_Bracket || {};
+          notes = s3.speakerNotes || '';
+          const entities = s3.entities || [];
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">03 // THE 5-PLAYER COMPETITIVE BRACKET</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s3.title || 'Competitive Spread Centered on Client'}</h2>
+              </div>
+              <div class="grid grid-cols-5 gap-2 text-xs">
+                ${entities.map((e, i) => `
+                  <div class="p-2.5 rounded-lg border ${i === 2 || e.role === 'client' ? 'bg-sky-950/50 border-sky-400' : 'bg-slate-950 border-slate-800'} space-y-1">
+                    <div class="text-[9px] uppercase font-bold ${i === 2 ? 'text-sky-300' : 'text-slate-400'} truncate">${e.roleLabel}</div>
+                    <div class="font-bold text-white truncate">${e.name}</div>
+                    <div class="text-[10px] text-sky-400 font-bold">${e.authorityScore}/10</div>
+                    <div class="text-[9px] text-slate-400 line-clamp-2">${e.audienceScale}</div>
+                    <div class="text-[9px] text-emerald-400 line-clamp-2">${e.coreStrength}</div>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                <span class="text-[10px] font-bold uppercase text-sky-400 block mb-1">Strategic Takeaway</span>
+                <p contenteditable="true" class="text-xs text-slate-300 leading-relaxed">${s3.strategicTakeaway || 'Exploit lateral rival weaknesses before confronting aspirational leaders.'}</p>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 4: {
+          const s4 = data.slide4_DeepDive || {};
+          notes = s4.speakerNotes || '';
+          const channels = s4.channels || [];
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">04 // COMPETITIVE DEEP DIVE (OWNED & EARNED MEDIA)</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s4.title || 'Digital Channel Benchmarking'}</h2>
+              </div>
+              <div class="space-y-2 text-xs">
+                ${channels.map(ch => `
+                  <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                    <div class="font-bold text-white text-[11px]">${ch.channel}</div>
+                    <div class="text-slate-400 text-[10px]"><span class="text-slate-500 font-bold">Client:</span> ${ch.clientStatus}</div>
+                    <div class="text-slate-400 text-[10px]"><span class="text-slate-500 font-bold">Rivals:</span> ${ch.aspirationalBenchmark}</div>
+                    <div class="text-emerald-300 text-[10px] font-medium"><span class="text-emerald-500 font-bold">Action:</span> ${ch.strategicAssessment}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 5: {
+          const s5 = data.slide5_GapMatrix || {};
+          notes = s5.speakerNotes || '';
+          const diag = s5.diagnostic || { doingWell: [], doingBetter: [], needToAddWhitespace: [] };
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">05 // GAP & WHITESPACE MATRIX</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s5.title || 'The 3-Column Diagnostic'}</h2>
+              </div>
+              <div class="grid grid-cols-3 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-2">
+                  <div class="font-bold text-emerald-400 uppercase text-[10px] border-b border-slate-800 pb-1">Doing Well (Defend)</div>
+                  ${(diag.doingWell || []).map(i => `
+                    <div>
+                      <div class="font-bold text-white text-[11px]">${i.title}</div>
+                      <div class="text-[10px] text-slate-400">${i.detail}</div>
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-amber-500/30 space-y-2">
+                  <div class="font-bold text-amber-400 uppercase text-[10px] border-b border-slate-800 pb-1">Doing Better (Counter)</div>
+                  ${(diag.doingBetter || []).map(i => `
+                    <div>
+                      <div class="font-bold text-white text-[11px]">${i.title}</div>
+                      <div class="text-[10px] text-slate-400">${i.detail}</div>
+                      <div class="text-[10px] text-amber-300 font-medium">Counter: ${i.counterTactic}</div>
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-sky-500/30 space-y-2">
+                  <div class="font-bold text-sky-400 uppercase text-[10px] border-b border-slate-800 pb-1">Whitespace (Seize)</div>
+                  ${(diag.needToAddWhitespace || []).map(i => `
+                    <div>
+                      <div class="font-bold text-white text-[11px]">${i.title}</div>
+                      <div class="text-[10px] text-slate-400">${i.rationale}</div>
+                      <div class="text-[10px] text-sky-300 font-medium">${i.commercialValue}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 6: {
+          const s6 = data.slide6_ICP || {};
+          notes = s6.speakerNotes || '';
+          const icp = s6.icp || {};
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">06 // IDEAL CUSTOMER PROFILE (ICP) DOSSIER</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s6.title || 'Target Persona & Buying Triggers'}</h2>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div>
+                    <span class="text-slate-400 uppercase text-[10px] block font-semibold">Core Target Persona</span>
+                    <span contenteditable="true" class="text-sm font-bold text-white">${icp.personaName || 'Target Client Persona'}</span>
+                  </div>
+                  <div class="text-right text-[11px] text-slate-400 max-w-xs">${icp.demographics || ''}</div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <span class="text-red-400 uppercase text-[10px] block font-bold mb-1">Core Pain Points</span>
+                    <ul class="space-y-1 text-slate-300 text-[11px]">
+                      ${(icp.corePainPoints || []).map(p => `<li>• ${p}</li>`).join('')}
+                    </ul>
+                  </div>
+                  <div>
+                    <span class="text-emerald-400 uppercase text-[10px] block font-bold mb-1">Buying & Backing Triggers</span>
+                    <ul class="space-y-1 text-slate-300 text-[11px]">
+                      ${(icp.buyingOrBackingTriggers || []).map(t => `<li>• ${t}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+                <div class="pt-2 border-t border-slate-800 text-[11px]">
+                  <span class="text-red-400 font-bold uppercase text-[10px]">Anti-Persona (Do Not Waste Hours On): </span>
+                  <span contenteditable="true" class="text-slate-400">${icp.antiPersona || 'Unqualified leads.'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 7: {
+          const s7 = data.slide7_Positioning || {};
+          notes = s7.speakerNotes || '';
+          const pos = s7.positioning || {};
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">07 // DIFFERENTIATED POSITIONING & ELEVATOR PITCHES</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s7.title || 'Elevator Pitches & Contrast Wedges'}</h2>
+              </div>
+              <div class="p-3 rounded-xl bg-sky-950/60 border border-sky-400 flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase text-sky-400">Category Anchor</span>
+                <span contenteditable="true" class="text-sm font-black text-white">${pos.categoryAnchor || 'Distinct Category Leader'}</span>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                <span class="text-[10px] font-bold uppercase text-slate-400">10-Second Hook</span>
+                <p contenteditable="true" class="text-sm sm:text-base font-semibold text-white italic">"${pos.tenSecondElevatorPitch || 'Sharp elevator pitch.'}"</p>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-1.5">
+                <span class="text-[10px] font-bold uppercase text-amber-400">Contrast Wedge Against Rivals</span>
+                <p contenteditable="true" class="text-xs sm:text-sm text-slate-300 leading-relaxed">${pos.contrastWedgeAgainstRivals || 'How client directly discredits rival weaknesses.'}</p>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 8: {
+          const s8 = data.slide8_Roadmap || {};
+          notes = s8.speakerNotes || '';
+          const phases = s8.phases || [];
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">08 // 12-MONTH PHASED VISIBILITY ROADMAP</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s8.title || '4-Phase Strategic Execution Plan'}</h2>
+              </div>
+              <div class="grid grid-cols-4 gap-2 text-xs">
+                ${phases.map(ph => `
+                  <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 flex flex-col justify-between">
+                    <div>
+                      <div class="flex items-center justify-between text-[10px] font-bold">
+                        <span class="text-sky-400">PHASE ${ph.phase}</span>
+                        <span class="text-slate-500">${ph.monthRange}</span>
+                      </div>
+                      <div class="font-bold text-white text-xs mt-1">${ph.name}</div>
+                      <div class="text-[10px] text-slate-400 mt-1 italic">${ph.focus}</div>
+                    </div>
+                    <ul class="space-y-1 pt-2 border-t border-slate-800 text-[10px] text-slate-300">
+                      ${(ph.keyMilestones || []).map(m => `<li>• ${m}</li>`).join('')}
+                    </ul>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 9: {
+          const s9 = data.slide9_ChannelWaterfall || {};
+          notes = s9.speakerNotes || '';
+          const wf = s9.waterfall || {};
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">09 // CONTENT & CHANNEL PRIORITIZATION WATERFALL</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s9.title || 'Capacity-Calibrated Waterfall'}</h2>
+              </div>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-sky-950/60 border border-sky-400 flex items-center justify-between">
+                  <div>
+                    <div class="text-[10px] uppercase font-bold text-sky-300">Tier 1 Primary Channel</div>
+                    <div class="font-bold text-white text-sm">${wf.tier1Primary ? wf.tier1Primary.channel : 'Primary Funnel'}</div>
+                    <div class="text-[11px] text-slate-300 mt-0.5">Cadence: ${wf.tier1Primary ? wf.tier1Primary.cadence : 'Bi-weekly'}</div>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-lg font-black text-sky-400">${wf.tier1Primary ? wf.tier1Primary.allocatedHoursWeekly : 3.5} hrs/wk</span>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Tier 2 Secondary Channel</div>
+                    <div class="font-bold text-white text-sm">${wf.tier2Secondary ? wf.tier2Secondary.channel : 'Secondary Channel'}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">Cadence: ${wf.tier2Secondary ? wf.tier2Secondary.cadence : 'Monthly'}</div>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-lg font-black text-slate-300">${wf.tier2Secondary ? wf.tier2Secondary.allocatedHoursWeekly : 1.5} hrs/wk</span>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between">
+                  <div>
+                    <div class="text-[10px] uppercase font-bold text-emerald-400">Capacity Reality Audit</div>
+                    <div class="text-xs text-slate-300">Total Required: ${wf.hoursRealityCheck ? wf.hoursRealityCheck.totalRequiredHours : 6} hrs/wk | Client Capacity: ${data.slide2_StrategicBaseline ? data.slide2_StrategicBaseline.weeklyHours : 6} hrs/wk</div>
+                    <div class="text-[10px] text-emerald-300 font-medium mt-0.5">Strategy: ${wf.hoursRealityCheck ? wf.hoursRealityCheck.mitigationStrategy : 'Strict repurposing'}</div>
+                  </div>
+                  <span class="text-xs font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">SUSTAINABLE</span>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
+        case 10: {
+          const s10 = data.slide10_AlliesEcosystem || {};
+          notes = s10.speakerNotes || '';
+          const allies = s10.allies || {};
+          html = `
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">10 // STRATEGIC ALLIES & REFERRAL ECOSYSTEM</span>
+                <h2 contenteditable="true" class="text-xl sm:text-2xl font-black text-white mt-1">${s10.title || 'Allies, Communities & Organic Multipliers'}</h2>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="text-[10px] uppercase font-bold text-sky-400 border-b border-slate-800 pb-1">Non-Competing Trade / Creative Allies</div>
+                  ${(allies.nonCompetingPartners || []).map(p => `
+                    <div>
+                      <div class="font-bold text-white text-[11px]">${p.partnerType}</div>
+                      <div class="text-[10px] text-slate-400">Targets: ${p.exampleTargets}</div>
+                      <div class="text-[10px] text-slate-300 font-medium">Mechanism: ${p.referralMechanism}</div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="text-[10px] uppercase font-bold text-emerald-400 border-b border-slate-800 pb-1">Ecosystem Hubs & Communities</div>
+                  ${(allies.ecosystemHubs || []).map(h => `
+                    <div>
+                      <div class="font-bold text-white text-[11px]">${h.hubName}</div>
+                      <div class="text-[10px] text-slate-400">Access: ${h.accessMethod}</div>
+                      <div class="text-[10px] text-emerald-300 font-medium">Yield: ${h.expectedYield}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950 border border-sky-500/30">
+                <span class="text-[10px] font-bold uppercase text-sky-400 block mb-0.5">Referral Architecture</span>
+                <p contenteditable="true" class="text-xs text-slate-300 leading-relaxed">${allies.referralLoopDesign || 'Organic referral loops to acquire customers with zero ad spend.'}</p>
+              </div>
+            </div>
+          `;
+          break;
+        }
+      }
+
+      dom.slideCanvasContent.innerHTML = html;
+      dom.notesBody.textContent = notes || 'No specific advisor notes recorded for this slide.';
+    }
+
+    // --- CLIENT JOURNEY & CRM CHECKLIST SUB-VIEW ---
+    function renderJourneyChecklist() {
+      if (!State.activeSourcebook) return;
+      const milestones = State.activeSourcebook.milestones || [];
+      const weeklyHours = State.activeClient ? State.activeClient.weeklyHours : 6;
+
+      // Group by Phase
+      const phaseMap = { 1: [], 2: [], 3: [], 4: [] };
+      milestones.forEach(m => {
+        if (phaseMap[m.phase]) phaseMap[m.phase].push(m);
+      });
+
+      dom.journeyPhasesGrid.innerHTML = '';
+      const phaseNames = {
+        1: 'Phase 1: Foundation & Playtest/Review Capture (M1-3)',
+        2: 'Phase 2: Earned Authority & Lateral Outflanking (M4-6)',
+        3: 'Phase 3: Pre-Launch / Pre-Season Acceleration (M7-9)',
+        4: 'Phase 4: Campaign Execution & Commercial Scale (M10-12)'
+      };
+
+      let activeHours = 0;
+
+      for (let p = 1; p <= 4; p++) {
+        const pMilestones = phaseMap[p] || [];
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3';
+        
+        let mHtml = '';
+        pMilestones.forEach(m => {
+          if (!m.completed) activeHours += (m.estimatedWeeklyHours || 2);
+          mHtml += `
+            <label class="flex items-start space-x-2.5 p-2 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+              <input type="checkbox" data-mid="${m.id}" ${m.completed ? 'checked' : ''} class="mt-1 accent-sky-400 rounded cursor-pointer milestone-check" />
+              <div class="flex-1 text-xs">
+                <div class="font-medium ${m.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${m.description}</div>
+                <div class="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+                  <span>Month ${m.targetMonth} • Est. ${m.estimatedWeeklyHours || 2} hrs/wk</span>
+                  <span class="${m.completed ? 'text-emerald-400' : 'text-sky-400'}">${m.completed ? '✓ Completed' : 'Pending'}</span>
+                </div>
+              </div>
+            </label>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-xs font-bold text-white uppercase">${phaseNames[p]}</h3>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400">${pMilestones.filter(m => m.completed).length}/${pMilestones.length} Done</span>
+          </div>
+          <div class="space-y-2">
+            ${mHtml || '<div class="text-xs text-slate-500">No milestones registered for this phase.</div>'}
+          </div>
+        `;
+        dom.journeyPhasesGrid.appendChild(card);
+      }
+
+      // Checkbox listener
+      dom.journeyPhasesGrid.querySelectorAll('.milestone-check').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const mid = e.target.dataset.mid;
+          const completed = e.target.checked;
+          const target = State.activeSourcebook.milestones.find(m => m.id === mid);
+          if (target) {
+            target.completed = completed;
+            if (isGoogleAppsScript() && State.activeClient) {
+              google.script.run.updateMilestoneStatus(State.activeClient.id, mid, completed);
+            }
+            renderJourneyChecklist();
+          }
+        });
+      });
+
+      // Update capacity check text
+      if (dom.capacityStatusText) {
+        if (activeHours > weeklyHours * 1.5) {
+          dom.capacityStatusText.textContent = `CRITICAL BOTTLENECK: Active tasks require ~${activeHours} hrs/wk vs client capacity ${weeklyHours} hrs/wk!`;
+          dom.capacityStatusText.className = 'text-red-400 ml-1 font-bold';
+        } else {
+          dom.capacityStatusText.textContent = `Balanced: Active tasks ~${activeHours} hrs/wk within sustainable limits (${weeklyHours} hrs/wk).`;
+          dom.capacityStatusText.className = 'text-emerald-400 ml-1';
+        }
+      }
+    }
+
+    // --- AUDIT RUN & PROGRESS HANDLING ---
+    function handleRunAudit() {
+      const clientName = document.getElementById('clientName').value.trim();
+      if (!clientName) return alert('Please enter client name');
+
+      const clientData = {
+        id: (State.activeClient && State.activeClient.id) ? State.activeClient.id : 'client-' + Date.now(),
+        name: clientName,
+        websiteUrl: document.getElementById('clientUrl').value.trim(),
+        track: document.querySelector('input[name="operationalTrack"]:checked').value,
+        maturityTier: Number(document.querySelector('input[name="maturityTier"]:checked').value),
+        weeklyHours: Number(dom.weeklyHours.value),
+        monthlyBudget: Number(dom.monthlyBudget.value),
+        primaryHorizon: document.getElementById('primaryHorizon').value.trim(),
+        seedCompetitors: [
+          document.getElementById('seed1').value.trim(),
+          document.getElementById('seed2').value.trim()
+        ].filter(Boolean)
+      };
+
+      // Show Progress Animation
+      dom.auditProgress.classList.remove('hidden');
+      dom.btnRunAudit.disabled = true;
+      dom.btnRunAudit.classList.add('opacity-50');
+
+      let stage = 1;
+      const stages = [
+        { pct: '25%', title: 'STAGE 1: GROUNDED COMPETITOR RECON', desc: 'Synthesizing live web intelligence, local signals, and building 5-Player Bracket...' },
+        { pct: '50%', title: 'STAGE 2: OWNED & EARNED MEDIA AUDIT', desc: 'Evaluating review velocity, itch/Discord presence, and identifying rival tactics...' },
+        { pct: '75%', title: 'STAGE 3: WHITESPACE & ICP POSITIONING', desc: 'Formulating contrast wedges, elevator hooks, and unburdened channel whitespace...' },
+        { pct: '95%', title: 'STAGE 4: 12-MONTH PHASED ROADMAP', desc: 'Constructing capacity-checked milestones and generating 10-slide sourcebook...' }
+      ];
+
+      const interval = setInterval(() => {
+        if (stage < stages.length) {
+          dom.progressBar.style.width = stages[stage].pct;
+          dom.progressStageTitle.textContent = stages[stage].title;
+          dom.progressStageDesc.textContent = stages[stage].desc;
+          stage++;
+        }
+      }, 1400);
+
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            clearInterval(interval);
+            dom.auditProgress.classList.add('hidden');
+            dom.btnRunAudit.disabled = false;
+            dom.btnRunAudit.classList.remove('opacity-50');
+            if (res.success && res.audit) {
+              applySourcebookData(res.audit);
+              switchTab('tabDeck');
+              loadInitialData(); // Refresh list
+            } else {
+              alert('Audit Error: ' + (res.error || 'Unknown error'));
+            }
+          })
+          .withFailureHandler((err) => {
+            clearInterval(interval);
+            dom.auditProgress.classList.add('hidden');
+            dom.btnRunAudit.disabled = false;
+            dom.btnRunAudit.classList.remove('opacity-50');
+            alert('Server Call Failed: ' + err.toString());
+          })
+          .runGeminiAudit(clientData, State.apiKey, State.model);
+      } else {
+        // Local simulation fallback
+        setTimeout(() => {
+          clearInterval(interval);
+          dom.auditProgress.classList.add('hidden');
+          dom.btnRunAudit.disabled = false;
+          dom.btnRunAudit.classList.remove('opacity-50');
+
+          if (clientData.track === 'trade_contractor') {
+            loadDemoData('trade');
+          } else {
+            loadDemoData('ttrpg');
+          }
+          switchTab('tabDeck');
+        }, 3500);
+      }
+    }
+
+    function handleSaveClientProfile() {
+      const clientName = document.getElementById('clientName').value.trim();
+      if (!clientName) return alert('Please enter client name');
+
+      const clientData = {
+        id: (State.activeClient && State.activeClient.id) ? State.activeClient.id : 'client-' + Date.now(),
+        name: clientName,
+        websiteUrl: document.getElementById('clientUrl').value.trim(),
+        track: document.querySelector('input[name="operationalTrack"]:checked').value,
+        maturityTier: Number(document.querySelector('input[name="maturityTier"]:checked').value),
+        weeklyHours: Number(dom.weeklyHours.value),
+        monthlyBudget: Number(dom.monthlyBudget.value),
+        primaryHorizon: document.getElementById('primaryHorizon').value.trim(),
+        status: 'Intake'
+      };
+
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            alert('Client Profile Saved to Google Sheet!');
+            loadInitialData();
+          })
+          .saveClient(clientData);
+      } else {
+        alert('Profile saved in local workspace session.');
+      }
+    }
+
+    function handleExportSlides() {
+      if (!State.activeSourcebook || !State.activeClient) {
+        return alert('Please run or select an audit first.');
+      }
+
+      dom.btnExportSlides.textContent = '⏳ Creating Google Slides...';
+      dom.btnExportSlides.disabled = true;
+
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            dom.btnExportSlides.textContent = '📊 Export to Google Slides';
+            dom.btnExportSlides.disabled = false;
+            if (res.success && res.slidesUrl) {
+              const openDeck = confirm('Google Slides Presentation created successfully in Google Drive!\n\nOpen presentation in new tab?');
+              if (openDeck) window.open(res.slidesUrl, '_blank');
+            } else {
+              alert('Slides Error: ' + (res.error || 'Failed to create slides'));
+            }
+          })
+          .withFailureHandler((err) => {
+            dom.btnExportSlides.textContent = '📊 Export to Google Slides';
+            dom.btnExportSlides.disabled = false;
+            alert('Export Error: ' + err.toString());
+          })
+          .createSourcebookSlides(State.activeClient, State.activeSourcebook);
+      } else {
+        setTimeout(() => {
+          dom.btnExportSlides.textContent = '📊 Export to Google Slides';
+          dom.btnExportSlides.disabled = false;
+          alert('Local preview mode: Slides generation function `createSourcebookSlides` is ready in Code.gs.\n\nDeploy to Google Apps Script to write natively to Google Drive with SlidesApp.');
+        }, 1200);
+      }
+    }
+
+    function handleSaveMilestonesToCrm() {
+      if (!State.activeSourcebook || !State.activeClient) return alert('No active audit.');
+      const milestones = State.activeSourcebook.milestones || [];
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler(() => alert('12-Month Milestones successfully synced to Google Sheet CRM!'))
+          .saveMilestones(State.activeClient.id, milestones);
+      } else {
+        alert(`Saved ${milestones.length} milestones to local CRM store.`);
+      }
+    }
+
+    function copyAuditJson() {
+      if (!State.activeSourcebook) return alert('No audit data loaded.');
+      const text = JSON.stringify(State.activeSourcebook, null, 2);
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Audit JSON copied to clipboard!');
+      }).catch(() => {
+        prompt('Copy Audit JSON:', text);
+      });
+    }
+
+    function refreshGlobalDashboard() {
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res.success) renderDrawerStats(res);
+          })
+          .getGlobalDashboard();
+      } else {
+        renderDrawerStats({
+          stats: {
+            totalClients: State.clients.length,
+            activeAudits: State.clients.filter(c => c.status === 'Audited').length,
+            tradeBreakdown: State.clients.filter(c => c.track === 'trade_contractor').length,
+            ttrpgBreakdown: State.clients.filter(c => c.track === 'ttrpg_indie').length
+          },
+          clients: State.clients,
+          upcomingMilestones: [
+            { clientId: 'client-ttrpg-001', description: 'Publish 16-page Ashcan PDF on Itch.io', targetMonth: 1, completed: true },
+            { clientId: 'client-ttrpg-001', description: 'Run 6 external blind playtest sessions', targetMonth: 3, completed: false },
+            { clientId: 'client-trade-002', description: 'Integrate automated SMS review triggers in dispatch', targetMonth: 1, completed: true },
+            { clientId: 'client-trade-002', description: 'Launch Apex Shield Club agreement', targetMonth: 4, completed: false }
+          ]
+        });
+      }
+    }
+
+    function renderDrawerStats(data) {
+      document.getElementById('counterTotalClients').textContent = data.stats.totalClients;
+      document.getElementById('counterActiveAudits').textContent = data.stats.activeAudits;
+      document.getElementById('counterTrade').textContent = data.stats.tradeBreakdown;
+      document.getElementById('counterTtrpg').textContent = data.stats.ttrpgBreakdown;
+
+      // Pipeline list
+      const pList = document.getElementById('pipelineList');
+      pList.innerHTML = '';
+      (data.clients || []).forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded bg-slate-800/60 border border-slate-700/60 text-xs flex items-center justify-between hover:bg-slate-800 cursor-pointer transition';
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-white">${c.name}</div>
+            <div class="text-[10px] text-slate-400">${c.track === 'trade_contractor' ? 'Trade SBO' : 'TTRPG'} • Tier ${c.maturityTier}</div>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded ${c.status === 'Audited' ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-700 text-slate-300'} font-semibold">
+            ${c.status || 'Intake'}
+          </span>
+        `;
+        item.addEventListener('click', () => {
+          selectClientById(c.id);
+          closeDrawer();
+        });
+        pList.appendChild(item);
+      });
+
+      // Global milestones
+      const mList = document.getElementById('globalMilestonesList');
+      mList.innerHTML = '';
+      (data.upcomingMilestones || []).slice(0, 5).forEach(m => {
+        const row = document.createElement('div');
+        row.className = 'p-2 rounded bg-slate-950 border border-slate-800 text-[11px] flex items-center justify-between';
+        row.innerHTML = `
+          <div class="truncate mr-2">
+            <span class="${m.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${m.description}</span>
+          </div>
+          <span class="text-[9px] px-1.5 py-0.5 rounded ${m.completed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'} font-mono shrink-0">
+            ${m.completed ? 'DONE' : 'M' + m.targetMonth}
+          </span>
+        `;
+        mList.appendChild(row);
+      });
+    }
+
+    function resetDossierForm() {
+      State.activeClient = null;
+      document.getElementById('clientName').value = '';
+      document.getElementById('clientUrl').value = '';
+      document.getElementById('primaryHorizon').value = '';
+      document.getElementById('seed1').value = '';
+      document.getElementById('seed2').value = '';
+      dom.weeklyHours.value = 6;
+      dom.weeklyHoursLabel.textContent = '6 Hours / Week';
+      dom.monthlyBudget.value = 500;
+      dom.monthlyBudgetLabel.textContent = '$500 / Month';
+    }
+
+    function saveSettings() {
+      const key = document.getElementById('inputApiKey').value.trim();
+      const model = document.getElementById('inputModel').value.trim() || 'gemini-3.5-flash';
+      State.apiKey = key;
+      State.model = model;
+
+      if (isGoogleAppsScript()) {
+        google.script.run
+          .withSuccessHandler(() => {
+            alert('Settings Saved in Google Apps Script Properties!');
+            dom.settingsModal.classList.add('hidden');
+          })
+          .saveUserApiKey(key, model);
+      } else {
+        localStorage.setItem('SESSION_ZERO_KEY', key);
+        localStorage.setItem('SESSION_ZERO_MODEL', model);
+        alert('Settings saved in local storage!');
+        dom.settingsModal.classList.add('hidden');
+      }
+    }
+
+    function onServerError(err) {
+      console.error('Apps Script Error:', err);
+    }
+  </script>
+</body>
+</html>
